@@ -1,7 +1,10 @@
 #pragma once
 
+// Small update for documentation reasons
+
 #define _CRT_SECURE_NO_WARNINGS
 
+// Some of these includes may be redundant or unused. Once the library is finished, I will prune the excess
 #include <iostream>
 #include <string>
 #include <vector>
@@ -55,10 +58,11 @@
 
 namespace Sapphire {
 
-std::string readBuffer;
-char CurlError[1024];
+std::string readBuffer; // The buffer used by cURL (NetworkTool) for storing the downloaded information
+char CurlError[1024];	// The buffer used by cURL (NetworkTool) for storing information exclusively related to errors
 
-const int BLACK = 30;
+// The following consts are for changing the line color of terminal output, if UseVirtualTerminal() has been invoked
+const int BLACK = 30;	
 const int RED = 31;
 const int GREEN = 32;
 const int YELLOW = 33;
@@ -67,6 +71,7 @@ const int MAGENTA = 35;
 const int CYAN = 36;
 const int WHITE = 37;
 
+// Various error constants for switch[]ing returns
 const int READFILE_BAD_SIZE = 52;
 const int READFILE_MISSING = 53;
 const int READFILE_EMPTY_FILE = 54;
@@ -74,14 +79,17 @@ const int WRITEFILE_BAD_SIZE = 52;
 const int WRITEFILE_MISSING = 53;
 const int WRITEFILE_EMPTY_FILE = 54;
 
+// The number of logical cores the CPU reports to the OS
 const int processor_count = std::thread::hardware_concurrency();
 
+// Constants for the _LOG function
 const int LOG_INFO = 0;
 const int LOG_DEBUG = 1;
 const int LOG_WARN = 2;
 const int LOG_ERROR = 3;
 const int LOG_UNRECOVERABLE = 4;
 
+// Various error constants for switch[]ing returns
 const std::string REGTOOLS_NO_FILE = "FAIL_NO_FILE";
 const std::string REGTOOLS_CHECKED_OUT = "FAIL_CHECKED_OUT";
 const std::string REGTOOLS_CORRUPT = "FAIL_CORRUPT";
@@ -91,14 +99,19 @@ const std::string REGTOOLS_WRITE_SUCCESS = "SUCCESS";
 const std::string REGTOOLS_WRITE_FAIL = "FAIL";
 const std::string REGTOOLS_WRITE_CLOSE_FAIL = "FAIL";
 
+// Various hives for the ReadRegistry function. Not compatible with Windows' HKEY_LOCAL_MACHINE and etc macros
+// due to internal switching
 const int REGTOOLS_HKEY_CLASSES_ROOT = 0;
 const int REGTOOLS_HKEY_CURRENT_USER = 1;
 const int REGTOOLS_HKEY_LOCAL_MACHINE = 2;
 const int REGTOOLS_HKEY_USERS = 3;
 const int REGTOOLS_HKEY_CURRENT_CONFIG = 4;
 
-// Forward declaration
+/* Forward declarations */
 
+// The struct used by NetworkTool and various others. Prevents needing multiple arguments to call the function
+// Default constructor sets default values that should help most people. For most purposes, just setting the URL should
+// be sufficient.
 struct DownloadOptions {
 	std::string IP; // The IP to target
 	std::string URL; // OR the URL to target (Non-exclusive)
@@ -122,6 +135,7 @@ struct DownloadOptions {
 	}
 };
 
+// Legacy, left over function for setting the default values. Was used before the struct had a constructor.
 DownloadOptions ResetDownloadOptions(DownloadOptions DO)
 {
 	DO.IP = "";
@@ -142,6 +156,7 @@ DownloadOptions ResetDownloadOptions(DownloadOptions DO)
 	return DO;
 }
 
+// Internal function I use before testing a functions for bugs.
 void DebugOutput(std::string Message, bool NeedsTesting, std::string Reason = "Does not return, or can't fail")
 {
 	std::string NeedsTest;
@@ -192,19 +207,23 @@ std::string ReadRegistry(int Hive, const std::wstring& regSubKey, const std::wst
 void ClearConsoleScreen(HANDLE hConsole);
 void BenchmarkThread();
 void Benchmark();
-// End forward declarations
+/* End forward declarations */
 
-
+// Just calls UseVirtualTerminal. Does the same exact thing as just calling UseVirtualTerminal. Was used when 
+// these functions were a class, and UseVirtualTerminal was a private member.
 void SetupTerminal()
 {
 	UseVirtualTerminal();
 }
 
+// Taken from stack overflow, checks if a file is accessible. Will return false
+// if the file is locked by another process, or the context is invalid.
 inline bool CheckFileExistence(const std::string& name) {
 	struct stat buffer;
 	return (stat(name.c_str(), &buffer) == 0);
 }
 
+// Creates a directory, and if the directory already exists, will return true. 
 bool CreateDir(std::string DirPath)
 {
 	if (CheckFileExistence(DirPath)) {
@@ -232,6 +251,7 @@ bool CreateDir(std::string DirPath)
 
 }
 
+// Reads a file line by line into a vector of strings. Has a maximum file size of ~512MB
 int ReadFile(std::string File, std::vector<std::string> VectorToSaveTo)
 {
 	VectorToSaveTo.clear();
@@ -255,6 +275,7 @@ int ReadFile(std::string File, std::vector<std::string> VectorToSaveTo)
 	_LOG("Function: ReadFile. Result: Successfully read the file to the vector.", Sapphire::LOG_INFO);
 }
 
+// Writes to a file from a vector of strings, with a maximum vector size of ~512MB
 int WriteFileVector(std::string File, std::vector<std::string> Vector, bool ForceNewline)
 {
 	if (sizeof Vector > 512000000) {
@@ -284,6 +305,7 @@ int WriteFileVector(std::string File, std::vector<std::string> Vector, bool Forc
 	return 0;
 }
 
+// Returns a formatted string for use with cout and etc, for printing colored strings to a terminal.
 std::string ChangeLineColor(int ForegroundColor, std::string Message) {
 	std::string Formatter = "\033[0;";
 	Formatter.append(std::to_string(ForegroundColor));
@@ -293,6 +315,7 @@ std::string ChangeLineColor(int ForegroundColor, std::string Message) {
 	return Formatter;
 }
 
+// Simply gets the file size of the given filename.
 long GetFileSize(std::string filename)
 {
 	struct stat stat_buf;
@@ -300,6 +323,7 @@ long GetFileSize(std::string filename)
 	return rc == 0 ? stat_buf.st_size : -1;
 }
 
+// Converts a char array to a string. 
 std::string ConvertToString(char* a)
 {
 	int size = sizeof a;
@@ -311,6 +335,7 @@ std::string ConvertToString(char* a)
 	return s;
 }
 
+// Gets the console handle, and sets it to enable virtual terminal processing (Mainly for color support)
 void UseVirtualTerminal()
 {
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -320,7 +345,8 @@ void UseVirtualTerminal()
 	SetConsoleMode(hOut, dwMode);
 }
 
-static std::string GetTime()
+// Gets the current system time as string. Used mainly for the _LOG function to timestamp.
+std::string GetTime()
 {
 	auto start = std::chrono::system_clock::now();
 	std::time_t t = std::chrono::system_clock::to_time_t(start);
@@ -331,6 +357,7 @@ static std::string GetTime()
 	return ts;
 }
 
+// Writes data to a file from a string, with the option of overwriting the contents or not.
 void WriteFile(std::string Filename, std::string DataToWrite, bool Overwrite)
 {
 	if (Overwrite) {
@@ -347,6 +374,8 @@ void WriteFile(std::string Filename, std::string DataToWrite, bool Overwrite)
 	}
 }
 
+// Prints formatted data to a Log.txt located in the program's startup folder. 
+// Automatically gets the current system time and appends that as well.
 void _LOG(std::string Message, int ErrorLevel, bool OverwriteLog) {
 	std::string StringTime = GetTime();
 
@@ -387,6 +416,7 @@ void _LOG(std::string Message, int ErrorLevel, bool OverwriteLog) {
 	}
 }
 
+// Clears out the previous log contents, and sets it up for further usage.
 void InitializeLog()
 {
 	std::string StringTime = GetTime();
@@ -398,6 +428,7 @@ void InitializeLog()
 	WriteFile("Log.txt", ErrorString, true);
 }
 
+// I forgot why I made this actually. Will most likely be removed in the future.
 struct EasyVector {
 	std::vector<int> IntVector;
 	std::vector<int64_t> Int64Vector;
@@ -411,6 +442,7 @@ struct EasyVector {
 	std::vector<unsigned long> ULongVector;
 };
 
+// Measures the execution time of a *void function. 
 long long GetExecutionTime(void(*f)(void))
 {
 	auto t1 = std::chrono::high_resolution_clock::now();
@@ -421,6 +453,7 @@ long long GetExecutionTime(void(*f)(void))
 	return duration;
 }
 
+// Gets the time it takes to run the libary's benchmark.
 long long BenchmarkTime()
 {
 	auto t1 = std::chrono::high_resolution_clock::now();
@@ -432,6 +465,8 @@ long long BenchmarkTime()
 	return duration;
 }
 
+// Copies data below the 32bit address space (in size) from a string to the system clipboard.
+// Also used by the benchmarking function.
 void CopyDataToClipboard(std::string Data)
 {
 
@@ -457,6 +492,9 @@ void CopyDataToClipboard(std::string Data)
 	CloseClipboard();
 }
 
+// The actual benchmark function. This used to be threaded, but with current optimizations made
+// externally to Windows 10's scheduler, now runs them sequentially 100 times, then
+// averages the time it takes the run all of the benchmarks.
 void BenchmarkAndClipboard()
 {
 	long long TotalTime = 0;
@@ -491,7 +529,8 @@ const int CURL_BAD_TRANSPORT = 5;
 const int CURL_BAD_NAME = 6;
 const int CURL_BAD_PATH = 7;
 
-// Not for external use.
+// Internal function used by NetworkTool and DownloadFile, for writing the data
+// via fwrite.
 size_t write_data(void* ptr, size_t size, size_t nmemb, FILE* stream)
 {
 	size_t written;
@@ -499,7 +538,7 @@ size_t write_data(void* ptr, size_t size, size_t nmemb, FILE* stream)
 	return written;
 }
 
-// Not for external use.
+// Internal function used by NetworkTool and Downloadfile
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
 {
 	((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -605,12 +644,16 @@ int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::
 	return 0;
 }
 
+// Checks if the string provided only contains numbers.
 bool IsNumber(const std::string& str)
 {
 	return !str.empty() &&
 		(str.find_first_not_of("[0123456789]") == std::string::npos);
 }
 
+// Splits a string based on delimiter, and returns a vector containing the split strings.
+// Isn't very efficient, and isn't a map, so unless the user knows how many times the
+// string will split, is pretty useless. Will possibly be removed in the future.
 std::vector<std::string> Split(const std::string& str, char delim)
 {
 	auto i = 0;
@@ -627,6 +670,7 @@ std::vector<std::string> Split(const std::string& str, char delim)
 	return list;
 }
 
+// Checks if the supplied string is a valid IPv4 address.
 bool IsValidIP(std::string ip)
 {
 	std::vector<std::string> list = Split(ip, '.');
@@ -643,6 +687,8 @@ bool IsValidIP(std::string ip)
 	return true;
 }
 
+// I made this a long time ago, and pretty sure it doesn't work anymore. 
+// After testing, I will either fix it, or remove it.
 void PortScanner()
 {
 	DownloadOptions DO;
@@ -740,6 +786,7 @@ void PortScanner()
 	ResetDownloadOptions(DO);
 }
 
+// Simply returns the current signal strength of the first connected adapter.
 std::string GetWiFiSignalStrength()
 {
 	HANDLE hClient;
@@ -814,6 +861,7 @@ std::string GetWiFiSignalStrength()
 	return std::to_string(pBssEntry->lRssi);
 }
 
+// Gets and prints information regarding the NIC and WiFi currently used.
 int GetWiFiInformation()
 {
 
@@ -1151,6 +1199,8 @@ int GetWiFiInformation()
 	return dwRetVal;
 }
 
+// The best function ever made.
+// Naw, it's a generic cURL function using my struct, which just downloads the page/ item, optionally to memory.
 std::string NetworkTool(DownloadOptions DO)
 {
 
@@ -1232,6 +1282,7 @@ bool CheckNetworkConnection()
 	}
 }
 
+// Checks if a specific server can be contacted.
 bool CheckConnectionToServer(LPCWSTR ServerURL)
 {
 	bool ConnectionTest = InternetCheckConnection(ServerURL, FLAG_ICC_FORCE_CONNECTION, 0);
@@ -1243,6 +1294,7 @@ bool CheckConnectionToServer(LPCWSTR ServerURL)
 	}
 }
 
+// Converts a string to a wide string (std::string to std::wstring)
 std::wstring s2ws(const std::string& str)
 {
 	using convert_typeX = std::codecvt_utf8<wchar_t>;
@@ -1264,6 +1316,7 @@ std::string ws2s(const std::wstring& wstr)
 	return converterX.to_bytes(wstr);
 }
 
+// Starts a process.
 int StartProcess(LPCSTR lpApplicationName, std::string cmdLine, bool isWait, LPDWORD pExitCode)
 {
 
@@ -1316,12 +1369,14 @@ int StartProcess(LPCSTR lpApplicationName, std::string cmdLine, bool isWait, LPD
 
 }
 
+// Gets the HWND of a window
 HWND GetWindowHWND(std::wstring ToFind)
 {
 	HWND Find = ::FindWindowExW(0, 0, ToFind.c_str(), 0);
 	return Find;
 }
 
+// Gets the last reported Windows error, and returns it as a string.
 std::string GetLastErrorAsString()
 {
 	//Get the error message, if any.
@@ -1341,6 +1396,7 @@ std::string GetLastErrorAsString()
 	return message;
 }
 
+// Reads a specific registry entry, and returns the value as a string
 std::string ReadRegistry(int Hive, const std::wstring& regSubKey, const std::wstring& regValue, bool ShowOutput)
 {
 	size_t bufferSize = 0xFFF; // If too small, will be resized down below.
@@ -1449,6 +1505,7 @@ std::string ReadRegistry(int Hive, const std::wstring& regSubKey, const std::wst
 	return REGTOOLS_UNKNOWN;
 }
 
+// Clears the terminal
 void ClearConsoleScreen(HANDLE hConsole)
 {
 	COORD coordScreen = { 0, 0 };    /* here's where we'll home the
