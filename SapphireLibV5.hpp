@@ -214,11 +214,11 @@ bool CreateDir(std::string DirPath)
 	bool MakeDirRet = _mkdir(DirPath.c_str());
 
 	if (MakeDirRet == EEXIST) {
-		_LOG("Cannot create directory, already exists.");
+		_LOG("Cannot create directory, already exists.", Sapphire::LOG_INFO);
 		return true;
 	}
 	if (MakeDirRet == ENOENT) {
-		_LOG("Cannot create directory, path missing.");
+		_LOG("Cannot create directory, path missing.", Sapphire::LOG_ERROR);
 		return false;
 	}
 
@@ -236,7 +236,7 @@ int ReadFile(std::string File, std::vector<std::string> VectorToSaveTo)
 {
 	VectorToSaveTo.clear();
 	if (CheckFileExistence(File) == false) {
-		_LOG("Function: ReadFile. Result: Error, the file was missing or inaccessible under the current user context.");
+		_LOG("Function: ReadFile. Result: Error, the file was missing or inaccessible under the current user context.", Sapphire::LOG_ERROR);
 		return READFILE_MISSING;
 	}
 	if (GetFileSize(File) > 512000000) {
@@ -252,17 +252,17 @@ int ReadFile(std::string File, std::vector<std::string> VectorToSaveTo)
 	{
 		VectorToSaveTo.push_back(line);
 	}
-	_LOG("Function: ReadFile. Result: Successfully read the file to the vector.");
+	_LOG("Function: ReadFile. Result: Successfully read the file to the vector.", Sapphire::LOG_INFO);
 }
 
 int WriteFileVector(std::string File, std::vector<std::string> Vector, bool ForceNewline)
 {
 	if (sizeof Vector > 512000000) {
-		_LOG("Function: WriteFile. Result: Error, the vector's total size was greater then 512MB.");
+		_LOG("Function: WriteFile. Result: Error, the vector's total size was greater then 512MB.", Sapphire::LOG_ERROR);
 		return WRITEFILE_BAD_SIZE;
 	}
 	if (sizeof Vector == 0) {
-		_LOG("Function: WriteFile. Result: Error, the vector was empty or cleared.");
+		_LOG("Function: WriteFile. Result: Error, the vector was empty or cleared.", Sapphire::LOG_ERROR);
 		return WRITEFILE_EMPTY_FILE;
 	}
 	std::ofstream myfile;
@@ -280,7 +280,7 @@ int WriteFileVector(std::string File, std::vector<std::string> Vector, bool Forc
 		myfile << Vector[i];
 	}
 	myfile.close();
-	_LOG("Function: WriteFile. Result: Successfully written the contents of the vector to the file.");
+	_LOG("Function: WriteFile. Result: Successfully written the contents of the vector to the file.", Sapphire::LOG_INFO);
 	return 0;
 }
 
@@ -290,7 +290,6 @@ std::string ChangeLineColor(int ForegroundColor, std::string Message) {
 	Formatter.append("m");
 	Formatter.append(Message);
 	Formatter.append("\033[0m");
-	// _LOG(Formatter);
 	return Formatter;
 }
 
@@ -522,7 +521,7 @@ int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::
 
 	// Error checking
 	if (URL.substr(0, 4) != "http") {
-		_LOG("Function: DownloadFile. Result: Error, the URL passed didn't contain HTTP or HTTPS at the start.");
+		_LOG("Function: DownloadFile. Result: Error, the URL passed didn't contain HTTP or HTTPS at the start.", Sapphire::LOG_ERROR);
 		return CURL_BAD_URL;
 	}
 
@@ -530,12 +529,12 @@ int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::
 
 		if (CheckFileExistence(DownloadPath) != true) {
 			if (CreatePath == false) {
-				_LOG("Function: DownloadFile. Result: Error, the directory to save to didn't exist, CreatePath was false.");
+				_LOG("Function: DownloadFile. Result: Error, the directory to save to didn't exist, CreatePath was false.", Sapphire::LOG_ERROR);
 				return CURL_BAD_PATH;
 			}
 			else {
 				if (CreateDir(DownloadPath) != true) {
-					_LOG("Function: DownloadFile. Result: Error, the directory to save to didn't exist, and couldn't be created.");
+					_LOG("Function: DownloadFile. Result: Error, the directory to save to didn't exist, and couldn't be created.", Sapphire::LOG_ERROR);
 					return CURL_BAD_PATH;
 				}
 			}
@@ -569,7 +568,7 @@ int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 			res = curl_easy_perform(curl);
 			curl_easy_cleanup(curl);
-			_LOG(curl_easy_strerror(res));
+			_LOG(curl_easy_strerror(res), Sapphire::LOG_INFO);
 		}
 		else {
 			fp = fopen(CustomDownload, "wb");
@@ -597,7 +596,7 @@ int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::
 					filestr.close();
 					IsFileBlocked = false;
 				}
-				_LOG("Function: DownloadFile. Result: Successfully downloaded the file.");
+				_LOG("Function: DownloadFile. Result: Successfully downloaded the file.", Sapphire::LOG_INFO);
 				return ReturnValue;
 			}
 			return 0;
@@ -1249,7 +1248,7 @@ std::wstring s2ws(const std::string& str)
 	using convert_typeX = std::codecvt_utf8<wchar_t>;
 	std::wstring_convert<convert_typeX, wchar_t> converterX;
 
-	_LOG("Function: s2ws. Result: Success / No relative return.");
+	_LOG("Function: s2ws. Result: Success / No relative return.", Sapphire::LOG_INFO);
 
 	return converterX.from_bytes(str);
 }
@@ -1260,7 +1259,7 @@ std::string ws2s(const std::wstring& wstr)
 	using convert_typeX = std::codecvt_utf8<wchar_t>;
 	std::wstring_convert<convert_typeX, wchar_t> converterX;
 
-	_LOG("Function: ws2s. Result: Success / No relative return.");
+	_LOG("Function: ws2s. Result: Success / No relative return.", Sapphire::LOG_INFO);
 
 	return converterX.to_bytes(wstr);
 }
@@ -1294,7 +1293,7 @@ int StartProcess(LPCSTR lpApplicationName, std::string cmdLine, bool isWait, LPD
 		// create process failed,
 		//Logger::trace(error, getClassName(), "createProcess", getFormattedStringA("create process failed with error:%d, 
 		// Commad line:'%s',isWait:%d",GetLastError(), cmdLine.c_str(), isWait),"CreateProcess Failed");
-		_LOG("Function: StartProcess. Result: Failure. Create process failed. Tracer unavailable.");
+		_LOG("Function: StartProcess. Result: Failure. Create process failed. Tracer unavailable.", Sapphire::LOG_ERROR);
 		return 0;
 	}
 
@@ -1312,7 +1311,7 @@ int StartProcess(LPCSTR lpApplicationName, std::string cmdLine, bool isWait, LPD
 	pi.hProcess = NULL;
 	::CloseHandle(pi.hThread);
 	pi.hThread = NULL;
-	_LOG("Function: StartProcess. Result: Thread executed successfully.");
+	_LOG("Function: StartProcess. Result: Thread executed successfully.", Sapphire::LOG_INFO);
 	return 1; // return non zero. function succeeded
 
 }
@@ -1320,7 +1319,6 @@ int StartProcess(LPCSTR lpApplicationName, std::string cmdLine, bool isWait, LPD
 HWND GetWindowHWND(std::wstring ToFind)
 {
 	HWND Find = ::FindWindowExW(0, 0, ToFind.c_str(), 0);
-	_LOG("Function: GetWindowHWND. Result: HWND return value.");
 	return Find;
 }
 
