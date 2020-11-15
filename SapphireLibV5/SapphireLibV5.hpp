@@ -1,5 +1,9 @@
 #pragma once
 
+// Copyright Jake Jensen, 2020
+
+// Test commit for git integration
+
 // Once I figure out how to port the various functions to secure, I'll remove this macro.
 #define _CRT_SECURE_NO_WARNINGS
 
