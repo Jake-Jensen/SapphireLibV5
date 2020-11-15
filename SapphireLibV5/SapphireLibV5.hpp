@@ -2,8 +2,6 @@
 
 // Copyright Jake Jensen, 2020
 
-// Test commit for git integration
-
 // Once I figure out how to port the various functions to secure, I'll remove this macro.
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -216,6 +214,7 @@ std::string ReadRegistry(int Hive, const std::wstring& regSubKey, const std::wst
 void ClearConsoleScreen(HANDLE hConsole);
 void BenchmarkThread();
 void Benchmark();
+int RandomNumberGenerator(int Lower, int Upper);
 /* End forward declarations */
 
 // Just calls UseVirtualTerminal. Does the same exact thing as just calling UseVirtualTerminal. Was used when 
@@ -1607,4 +1606,13 @@ void Benchmark()
 	}
 }
 
+int RandomNumberGenerator(int Lower, int Upper)
+{
+	std::random_device dev;
+	std::mt19937 rng(dev());
+	std::uniform_int_distribution<std::mt19937::result_type> dist6(Lower, Upper);
+	return dist6(rng);
+}
+
+// End namespace
 };
