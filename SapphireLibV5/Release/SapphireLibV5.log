@@ -1,0 +1,11 @@
+﻿  dllmain.cpp
+G:\Repos\SapphireLibV5\SapphireLibV5\SapphireLibV5.hpp(149,32): warning C4251: 'Sapphire::ThreadStatus': class 'std::vector<bool,std::allocator<bool>>' needs to have dll-interface to be used by clients of class 'Sapphire'
+G:\Repos\SapphireLibV5\SapphireLibV5\SapphireLibV5.hpp(149): message : see declaration of 'std::vector<bool,std::allocator<bool>>'
+G:\Repos\SapphireLibV5\SapphireLibV5\SapphireLibV5.hpp(169,22): warning C4018: '<': signed/unsigned mismatch
+     Creating library G:\Repos\SapphireLibV5\Release\SapphireLibV5.lib and object G:\Repos\SapphireLibV5\Release\SapphireLibV5.exp
+  Generating code
+  4 of 358 functions ( 1.1%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    17 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  SapphireLibV5.vcxproj -> G:\Repos\SapphireLibV5\Release\SapphireLibV5.dll
