@@ -62,6 +62,8 @@ namespace Sapphire {
 std::string readBuffer; // The buffer used by cURL (NetworkTool) for storing the downloaded information
 char CurlError[1024];	// The buffer used by cURL (NetworkTool) for storing information exclusively related to errors
 
+bool IsUsingVirtualTerminal = false; // Global for verifying if the terminal has been setup for colors and etc
+
 // The following consts are for changing the line color of terminal output, if UseVirtualTerminal() has been invoked
 const int BLACK = 30;	
 const int RED = 31;
@@ -280,7 +282,7 @@ int ReadFile(std::string File, std::vector<std::string> VectorToSaveTo)
 	{
 		VectorToSaveTo.push_back(line);
 	}
-	_LOG("Function: ReadFile. Result: Successfully read the file to the vector.", Sapphire::LOG_INFO);
+	return 0;
 }
 
 // Writes to a file from a vector of strings, with a maximum vector size of ~512MB
@@ -381,6 +383,7 @@ void UseVirtualTerminal()
 	GetConsoleMode(hOut, &dwMode);
 	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	SetConsoleMode(hOut, dwMode);
+	IsUsingVirtualTerminal = true;
 }
 
 // Gets the current system time as string. Used mainly for the _LOG function to timestamp.
@@ -516,18 +519,28 @@ void CopyDataToClipboard(std::string Data)
 	const char* output = Data.c_str();
 	const size_t len = strlen(output) + 1;
 	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
-	if (sizeof hMem == 0) {
+	if (hMem != NULL) {
+#pragma warning(disable : 6387)
+		auto Test = memcpy(GlobalLock(hMem), output, len);
+#pragma warning(default : 6387)
+		if (Test != NULL) {
+			GlobalUnlock(hMem);
+			OpenClipboard(0);
+			EmptyClipboard();
+			SetClipboardData(CF_TEXT, hMem);
+			CloseClipboard();
+		}
+		else {
+			throw std::bad_alloc();
+			return;
+		}
+		
+	}
+	else {
 		throw std::bad_alloc();
 		return;
 	}
-	else {
-		memcpy(GlobalLock(hMem), output, len);
-	}
-	GlobalUnlock(hMem);
-	OpenClipboard(0);
-	EmptyClipboard();
-	SetClipboardData(CF_TEXT, hMem);
-	CloseClipboard();
+	
 }
 
 // The actual benchmark function. This used to be threaded, but with current optimizations made
@@ -631,7 +644,11 @@ int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::
 	std::string DownloadLocation = DownloadPath;
 	DownloadLocation.append(DownloadFile);
 	char CustomDownload[260];
-	strcpy(CustomDownload, DownloadLocation.c_str()); // Unsafe, will be changed to strcpy_s in a future update
+
+#pragma warning(disable : 4996)
+	strcpy(CustomDownload, DownloadLocation.c_str()); // But really MS, no one likes the _s variants. 
+#pragma warning(default : 4996)
+
 	curl = curl_easy_init();
 	if (curl) {
 		if (ToMemory) {
@@ -643,7 +660,9 @@ int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::
 			_LOG(curl_easy_strerror(res), Sapphire::LOG_INFO);
 		}
 		else {
-			fp = fopen(CustomDownload, "wb"); // Unsafe, will be changed to fopen_s in a future update
+#pragma warning(disable : 4996)
+			fp = fopen(CustomDownload, "wb");
+#pragma warning(default : 4996)
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
@@ -689,7 +708,7 @@ bool IsNumber(const std::string& str)
 // string will split, is pretty useless. Will possibly be removed in the future.
 std::vector<std::string> Split(const std::string& str, char delim)
 {
-	auto i = 0;
+	size_t i = 0;
 	std::vector<std::string> list;
 	auto pos = str.find(delim);
 	while (pos != std::string::npos) {
@@ -1327,6 +1346,8 @@ bool CheckConnectionToServer(LPCWSTR ServerURL)
 	}
 }
 
+// TODO: Convert to Multibytetowidechar and etc, for now, disable warning
+#pragma warning(disable : 4996)
 // Converts a string to a wide string (std::string to std::wstring)
 std::wstring s2ws(const std::string& str)
 {
@@ -1348,6 +1369,7 @@ std::string ws2s(const std::wstring& wstr)
 
 	return converterX.to_bytes(wstr);
 }
+#pragma warning(default : 4996)
 
 // Starts a process.
 int StartProcess(LPCSTR lpApplicationName, std::string cmdLine, bool isWait, LPDWORD pExitCode)
