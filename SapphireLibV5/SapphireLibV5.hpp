@@ -521,7 +521,7 @@ void CopyDataToClipboard(std::string Data)
 	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
 	if (hMem != NULL) {
 #pragma warning(disable : 6387)
-		auto Test = memcpy(GlobalLock(hMem), output, len);
+		auto Test = memcpy(GlobalLock(hMem), output, len); // VS throwing false warnings as usual.
 #pragma warning(default : 6387)
 		if (Test != NULL) {
 			GlobalUnlock(hMem);
