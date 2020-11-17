@@ -191,7 +191,8 @@ static std::string GetTime();
 void WriteFile(std::string Filename, std::string DataToWrite, bool Overwrite);
 void _LOG(std::string Message, int ErrorLevel = 0, bool OverwriteLog = true);
 void InitializeLog();
-long long GetExecutionTime(void(*f)(void));
+long long GetExecutionTimeP(void(*f)(void));
+long long GetExecutionTime(void(f)(void));
 long long BenchmarkTime();
 void CopyDataToClipboard(std::string Data);
 void BenchmarkAndClipboard();
@@ -484,7 +485,16 @@ struct EasyVector {
 };
 
 // Measures the execution time of a *void function. 
-long long GetExecutionTime(void(*f)(void))
+long long GetExecutionTimeP(void(*f)(void))
+{
+	auto t1 = std::chrono::high_resolution_clock::now();
+	f();
+	auto t2 = std::chrono::high_resolution_clock::now();
+
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+	return duration;
+}
+long long GetExecutionTime(void(f)(void))
 {
 	auto t1 = std::chrono::high_resolution_clock::now();
 	f();
