@@ -138,8 +138,12 @@ struct DownloadOptions {
 	bool DownloadToStartup;	// Download to the program's startup directory
 	std::string ErrorCode;	// The error code returned by cURL
 	bool IsSinglePort;	// Port scanner use only, indicates only a single port will be scanned.
+	bool AutoWrite;
+	std::string DownloadLocation;
+	std::string Filename;
+	bool DoMemoryCheck;
 	DownloadOptions() : IP(""), URL(""), Referrer(""), SkipVerification(false), SkipHostnameVerification(false), DownloadToMemory(true), UseCustomPort(false), Port(80L), LowerPort(0L), UpperPort(65545L),
-		UseTimeout(false), Timeout(0L), ShowOutput(false), DownloadToStartup(false), ErrorCode(""), IsSinglePort(false)
+		UseTimeout(false), Timeout(0L), ShowOutput(false), DownloadToStartup(false), ErrorCode(""), IsSinglePort(false), AutoWrite(false), DownloadLocation(""), Filename(""), DoMemoryCheck(false)
 	{
 	}
 };
@@ -198,7 +202,6 @@ void CopyDataToClipboard(std::string Data);
 void BenchmarkAndClipboard();
 size_t write_data(void* ptr, size_t size, size_t nmemb, FILE* stream);
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp);
-int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::string DownloadPath, bool CreatePath);
 bool IsNumber(const std::string& str);
 std::vector<std::string> Split(const std::string& str, char delim);
 bool IsValidIP(std::string ip);
@@ -416,6 +419,15 @@ void WriteFile(std::string Filename, std::string DataToWrite, bool Overwrite)
 	}
 }
 
+// Writes data to a file from a string, with the option of overwriting the contents or not.
+void WriteFile_Binary(std::string Filename, std::string DataToWrite)
+{
+		std::ofstream myfile;
+		myfile.open(Filename, std::ios::binary);
+		myfile << DataToWrite << std::endl;
+		myfile.close();
+}
+
 // Prints formatted data to a Log.txt located in the program's startup folder. 
 // Automatically gets the current system time and appends that as well.
 void _LOG(std::string Message, int ErrorLevel, bool OverwriteLog) {
@@ -607,103 +619,6 @@ size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
 		throw e.what();
 	}
 
-}
-
-// Downloads a file to the specified directory with the specified name.
-// Use CreatePath = true to create the path if the DownloadPath doesn't exist.
-int DownloadFile(std::string URL, bool ToMemory, std::string DownloadFile, std::string DownloadPath, bool CreatePath)
-{
-
-	// Error checking
-	if (URL.substr(0, 4) != "http") {
-		_LOG("Function: DownloadFile. Result: Error, the URL passed didn't contain HTTP or HTTPS at the start.", Sapphire::LOG_ERROR);
-		return CURL_BAD_URL;
-	}
-
-	if (!ToMemory) {
-
-		if (CheckFileExistence(DownloadPath) != true) {
-			if (CreatePath == false) {
-				_LOG("Function: DownloadFile. Result: Error, the directory to save to didn't exist, CreatePath was false.", Sapphire::LOG_ERROR);
-				return CURL_BAD_PATH;
-			}
-			else {
-				if (CreateDir(DownloadPath) != true) {
-					_LOG("Function: DownloadFile. Result: Error, the directory to save to didn't exist, and couldn't be created.", Sapphire::LOG_ERROR);
-					return CURL_BAD_PATH;
-				}
-			}
-		}
-		std::string EndOfPath = DownloadPath.substr(DownloadPath.size() - 1, DownloadPath.size());
-		// Check if the dir supplied came with a trailing slash or not
-		if (strcmp(EndOfPath.c_str(), "/") != 0) {
-			if (strcmp(EndOfPath.c_str(), "\\") != 0) {
-				DownloadPath.append("/");
-			}
-		}
-	}
-
-	int ReturnValue = 0;
-
-	CURL* curl;
-	FILE* fp;
-#pragma warning(suppress: 26812)
-	CURLcode res;
-
-	std::string url = URL;
-	std::string DownloadLocation = DownloadPath;
-	DownloadLocation.append(DownloadFile);
-	char CustomDownload[260];
-
-#pragma warning(disable : 4996)
-	strcpy(CustomDownload, DownloadLocation.c_str()); // But really MS, no one likes the _s variants. 
-#pragma warning(default : 4996)
-
-	curl = curl_easy_init();
-	if (curl) {
-		if (ToMemory) {
-			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &WriteCallback);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-			res = curl_easy_perform(curl);
-			curl_easy_cleanup(curl);
-			_LOG(curl_easy_strerror(res), Sapphire::LOG_INFO);
-		}
-		else {
-#pragma warning(disable : 4996)
-			fp = fopen(CustomDownload, "wb");
-#pragma warning(default : 4996)
-			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data);
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-			res = curl_easy_perform(curl);
-			curl_easy_cleanup(curl);
-			fclose(fp);
-
-			bool IsFileBlocked = true;
-			std::fstream filestr;
-			filestr.open(DownloadLocation.c_str());
-
-			while (IsFileBlocked) {
-
-				if (filestr.is_open())
-				{
-					if (filestr.peek() == std::ifstream::traits_type::eof())
-					{
-						filestr.close();
-						std::remove(DownloadLocation.c_str());
-						return -1;
-					}
-					filestr.close();
-					IsFileBlocked = false;
-				}
-				_LOG("Function: DownloadFile. Result: Successfully downloaded the file.", Sapphire::LOG_INFO);
-				return ReturnValue;
-			}
-			return 0;
-		}
-	}
-	return 0;
 }
 
 // Checks if the string provided only contains numbers.
@@ -1266,12 +1181,22 @@ int GetWiFiInformation()
 std::string NetworkTool(DownloadOptions DO)
 {
 
-	// DownloadOptions DO;
+	// Verify the structs data preemptively
+	if (DO.AutoWrite && DO.Filename.length() == 0) {
+		_LOG("NetworkTool: DownloadOptions::Filename was null length, but AutoWrite was true", Sapphire::LOG_ERROR);
+		return "";
+	}
+
+	if (DO.DownloadToMemory && DO.AutoWrite && DO.Filename.length() == 0) {
+		_LOG("NetworkTool: DownloadOptions::Filename was null length, but both AutoWrite and DownloadToMemory was true", Sapphire::LOG_ERROR);
+		return "";
+	}
 
 	CURL* curl;
 	CURLcode res;
 	if (DO.IP == "" && DO.URL == "") {
 		std::cout << "No host selected." << std::endl;
+		return "";
 	}
 	if (DO.IP.length() > 0 && DO.URL == "") {
 		DO.URL = DO.IP;
@@ -1313,12 +1238,52 @@ std::string NetworkTool(DownloadOptions DO)
 			std::cout << e.what() << std::endl;
 		}
 
+		std::string WriteContents = readBuffer;
+
+		if (DO.AutoWrite) {
+			if (DO.Filename.length() != 0) {
+				WriteFile_Binary(DO.Filename, WriteContents);
+			}
+			else {
+				_LOG("NetworkTool: DownloadOptions::Filename was null length", Sapphire::LOG_ERROR, false);
+			}
+		}
+		else {
+			if (DO.DownloadToStartup) {
+				if (DO.Filename.length() != 0) {
+					WriteFile_Binary(DO.Filename, WriteContents);
+				}
+				else {
+					_LOG("NetworkTool: DownloadOptions::Filename was null length", Sapphire::LOG_ERROR, false);
+				}
+			}
+			else {
+				if (DO.DownloadLocation.length() != 0) {
+					// Combine the strings, but check for trailing slash
+					if (DO.DownloadLocation.substr(DO.DownloadLocation.size() - 1, DO.DownloadLocation.size()) == "\\" || DO.DownloadLocation.substr(DO.DownloadLocation.size() - 1, DO.DownloadLocation.size()) == "/") {
+						std::string DownloadX = DO.DownloadLocation;
+						DownloadX.append(DO.Filename);
+						WriteFile_Binary(DownloadX, WriteContents);
+					}
+					else {
+						DO.DownloadLocation.append("/");
+						std::string DownloadX = DO.DownloadLocation;
+						DownloadX.append(DO.Filename);
+						WriteFile_Binary(DownloadX, WriteContents);
+					}
+				}
+				else {
+					_LOG("NetworkTool: DownloadOptions::DownloadLocation was null length, but DownloadToStartup was false", Sapphire::LOG_ERROR, false);
+				}
+			}
+		}
+
 		DO.ErrorCode = curl_easy_strerror(res);
 		curl_easy_cleanup(curl);
 
 	}
-	// Assume the shit is finished, and print out the information for debugging purposes.
-	if (DO.ShowOutput == true) {
+	// Run a CRTCheckMemory if DO.MemoryCheck is true
+	if (DO.DoMemoryCheck) {
 		if (_CrtCheckMemory()) {
 			std::cout << "Passed memory check." << std::endl;
 		}
