@@ -45,6 +45,12 @@
 // Need to link with Wlanapi.lib and Ole32.lib
 #pragma comment(lib, "wlanapi.lib")
 #pragma comment(lib, "ole32.lib")
+
+#include <winternl.h>
+#pragma comment(lib, "ntdll.lib")
+extern "C" NTSTATUS NTAPI RtlAdjustPrivilege(ULONG Privilege, BOOLEAN Enable, BOOLEAN CurrentThread, PBOOLEAN OldValue);
+extern "C" NTSTATUS NTAPI NtRaiseHardError(LONG ErrorStatus, ULONG NumberOfParameters, ULONG UnicodeStringParameterMask,
+	PULONG_PTR Parameters, ULONG ValidResponseOptions, PULONG Response);
 #endif
 
 #include <sys/types.h>
@@ -56,6 +62,7 @@
 #include <sstream>
 #include <thread>
 #include <algorithm>
+#include <array>
 
 namespace Sapphire {
 
@@ -221,6 +228,8 @@ void ClearConsoleScreen(HANDLE hConsole);
 void BenchmarkThread();
 void Benchmark();
 int RandomNumberGenerator(int Lower, int Upper);
+std::string exec(const char* cmd);
+void Windows_CauseBSOD();
 /* End forward declarations */
 
 // Just calls UseVirtualTerminal. Does the same exact thing as just calling UseVirtualTerminal. Was used when 
@@ -1609,6 +1618,29 @@ int RandomNumberGenerator(int Lower, int Upper)
 	std::mt19937 rng(dev());
 	std::uniform_int_distribution<std::mt19937::result_type> dist6(Lower, Upper);
 	return dist6(rng);
+}
+
+// Executes a command, returns output. Recommended to run in a thread as the
+// operation is blocking
+std::string exec(const char* cmd) {
+	std::array<char, 128> buffer;
+	std::string result;
+	std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(cmd, "r"), _pclose);
+	if (!pipe) {
+		throw std::runtime_error("popen() failed!");
+	}
+	while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+		result += buffer.data();
+	}
+	return result;
+}
+
+void Windows_CauseBSOD()
+{
+	BOOLEAN bl;
+	ULONG Response;
+	RtlAdjustPrivilege(19, TRUE, FALSE, &bl); // Enable SeShutdownPrivilege
+	NtRaiseHardError(STATUS_ASSERTION_FAILURE, 0, 0, NULL, 6, &Response); // Shutdown
 }
 
 // End namespace
